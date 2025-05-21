@@ -9,6 +9,7 @@ namespace RTF_MDI_Editor
     {
         private RichTextBox richTextBox;
         private string currentFile = "";
+        private bool isModified = false;
         private ContextMenuStrip contextMenu;
 
         public ChildForm()
@@ -17,7 +18,6 @@ namespace RTF_MDI_Editor
             Height = 600;
             Text = "Документ";
 
-            // Настройка RichTextBox
             richTextBox = new RichTextBox
             {
                 Dock = DockStyle.Fill,
@@ -29,16 +29,16 @@ namespace RTF_MDI_Editor
                 ScrollBars = RichTextBoxScrollBars.Both
             };
 
-            // Обработка горячих клавиш
             richTextBox.KeyDown += RichTextBox_KeyDown;
+            richTextBox.TextChanged += (s, e) => isModified = true;
 
-            // Контекстное меню (ПКМ)
             InitializeContextMenu();
 
             Controls.Add(richTextBox);
+
+            this.FormClosing += ChildForm_FormClosing;
         }
 
-        // Обработка горячих клавиш: Ctrl+V, Ctrl+C, Ctrl+S
         private void RichTextBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Control)
@@ -69,7 +69,6 @@ namespace RTF_MDI_Editor
             }
         }
 
-        // Создание контекстного меню (ПКМ) с вырезанием и копированием
         private void InitializeContextMenu()
         {
             contextMenu = new ContextMenuStrip();
@@ -79,7 +78,6 @@ namespace RTF_MDI_Editor
             richTextBox.ContextMenuStrip = contextMenu;
         }
 
-        // Загрузка файла (txt или rtf)
         public void LoadFile(string filePath)
         {
             if (File.Exists(filePath))
@@ -92,15 +90,16 @@ namespace RTF_MDI_Editor
 
                 currentFile = filePath;
                 Text = "Документ - " + Path.GetFileName(filePath);
+                isModified = false;
             }
         }
 
-        // Сохранение в текущий файл
         public void SaveFile()
         {
             if (!string.IsNullOrEmpty(currentFile))
             {
                 SaveToFile(currentFile);
+                isModified = false;
             }
             else
             {
@@ -108,7 +107,6 @@ namespace RTF_MDI_Editor
             }
         }
 
-        // Сохранение в новый файл
         public void SaveFileAs()
         {
             var saveDialog = new SaveFileDialog
@@ -121,6 +119,7 @@ namespace RTF_MDI_Editor
                 SaveToFile(saveDialog.FileName);
                 currentFile = saveDialog.FileName;
                 Text = "Документ - " + Path.GetFileName(currentFile);
+                isModified = false;
             }
         }
 
@@ -133,7 +132,6 @@ namespace RTF_MDI_Editor
                 File.WriteAllText(path, richTextBox.Text);
         }
 
-        // Вставка изображения вручную
         public void InsertImage()
         {
             var dialog = new OpenFileDialog { Filter = "Изображения|*.jpg;*.png;*.bmp" };
@@ -142,6 +140,66 @@ namespace RTF_MDI_Editor
                 Image img = Image.FromFile(dialog.FileName);
                 Clipboard.SetImage(img);
                 richTextBox.Paste();
+                isModified = true;
+            }
+        }
+
+        public void InsertTextFromFile()
+        {
+            var openDialog = new OpenFileDialog
+            {
+                Filter = "Текстовые файлы|*.txt;*.rtf|Все файлы|*.*",
+                Title = "Выберите файл с текстом для вставки"
+            };
+
+            if (openDialog.ShowDialog() == DialogResult.OK)
+            {
+                string ext = Path.GetExtension(openDialog.FileName).ToLower();
+                string content = "";
+
+                try
+                {
+                    if (ext == ".rtf")
+                    {
+                        using (var tempRtb = new RichTextBox())
+                        {
+                            tempRtb.LoadFile(openDialog.FileName);
+                            content = tempRtb.Text;
+                        }
+                    }
+                    else
+                    {
+                        content = File.ReadAllText(openDialog.FileName);
+                    }
+
+                    richTextBox.SelectedText = content;
+                    isModified = true;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Ошибка при вставке текста: " + ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        private void ChildForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (isModified)
+            {
+                var result = MessageBox.Show(
+                    "Сохранить изменения перед закрытием?",
+                    "Подтверждение выхода",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Question);
+
+                if (result == DialogResult.Yes)
+                {
+                    SaveFile();
+                }
+                else if (result == DialogResult.Cancel)
+                {
+                    e.Cancel = true;
+                }
             }
         }
     }

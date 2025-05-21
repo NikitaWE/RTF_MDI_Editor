@@ -14,7 +14,8 @@ namespace RTF_MDI_Editor
             Height = 700;
             Text = "RTF MDI Редактор";
 
-            menuStrip = new MenuStrip();
+            menuStrip = new MenuStrip { Dock = DockStyle.Top };
+
             var fileMenu = new ToolStripMenuItem("Файл");
             fileMenu.DropDownItems.Add("Новый", null, NewFile);
             fileMenu.DropDownItems.Add("Открыть", null, OpenFile);
@@ -23,6 +24,7 @@ namespace RTF_MDI_Editor
 
             var insertMenu = new ToolStripMenuItem("Вставка");
             insertMenu.DropDownItems.Add("Вставить изображение", null, InsertImage);
+            insertMenu.DropDownItems.Add("Вставить текст из файла", null, InsertText); // Обновлено
 
             menuStrip.Items.Add(fileMenu);
             menuStrip.Items.Add(insertMenu);
@@ -54,19 +56,32 @@ namespace RTF_MDI_Editor
         {
             if (ActiveMdiChild is ChildForm child)
                 child.SaveFile();
+            else
+                MessageBox.Show("Нет активного документа для сохранения.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void SaveFileAs(object sender, EventArgs e)
         {
             if (ActiveMdiChild is ChildForm child)
                 child.SaveFileAs();
+            else
+                MessageBox.Show("Нет активного документа для сохранения.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
         private void InsertImage(object sender, EventArgs e)
         {
             if (ActiveMdiChild is ChildForm child)
                 child.InsertImage();
+            else
+                MessageBox.Show("Нет активного документа для вставки изображения.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         }
 
+        private void InsertText(object sender, EventArgs e)
+        {
+            if (ActiveMdiChild is ChildForm child)
+                child.InsertTextFromFile(); // Новый метод
+            else
+                MessageBox.Show("Нет активного документа для вставки текста.", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
     }
 }
